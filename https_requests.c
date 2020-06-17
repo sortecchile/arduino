@@ -1,125 +1,95 @@
-#include <ESP8266WiFi.h>
-#include <WiFiClientSecure.h> 
-#include <ESP8266WebServer.h>
-#include <ESP8266HTTPClient.h>
-#include <OneWire.h>
-#include <DallasTemperature.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
  
-/* Set these to your desired credentials. */
-const char *ssid = "iPhone de Nicolás";  //ENTER YOUR WIFI SETTINGS
-const char *password = "Poillpoll123159";
-const int pinDatosDQ = 0; //D3 de wemos
+const char* ssid = "iPhone de Nicolás";
+const char* password = "Poillpoll123159";
  
-//Link to read data from https://jsonplaceholder.typicode.com/comments?postId=7
-//Web/Server address to read/write from 
-const char *host = "api.citylink.cl";
-const int httpsPort = 443;  //HTTPS= 443 and HTTP = 80
- 
-//SHA1 finger print of certificate use web browser to view and copy
-const char fingerprint[] PROGMEM = "F5 07 8D C4 76 6F 6E D5 CE 77 59 EE 93 7A E0 DF 1C 2D 8E EC";
-//=======================================================================
-//                    Power on setup
-//=======================================================================
-
-OneWire oneWireObjeto(pinDatosDQ);
-DallasTemperature sensorDS18B20(&oneWireObjeto);
-
 void setup() {
-  delay(1000);
-  Serial.begin(115200);
-  sensorDS18B20.begin(); 
-  WiFi.mode(WIFI_OFF);        //Prevents reconnection issue (taking too long to connect)
-  delay(1000);
-  WiFi.mode(WIFI_STA);        //Only Station No AP, This line hides the viewing of ESP as wifi hotspot
-  
-  WiFi.begin(ssid, password);     //Connect to your WiFi router
-  Serial.println("");
  
-  Serial.print("Connecting");
-  // Wait for connection
+  Serial.begin(115200);
+  delay(1000);
+ 
+  WiFi.begin(ssid, password); 
+ 
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+    delay(1000);
+    Serial.println("Connecting to WiFi..");
   }
  
-  //If connection successful show IP address in serial monitor
-  Serial.println("");
-  Serial.print("Connected to ");
-  Serial.println(ssid);
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());  //IP address assigned to your ESP
+  Serial.println("Connected to the WiFi network");
 }
  
-//=======================================================================
-//                    Main Program Loop
-//=======================================================================
-void loop() {
-  WiFiClientSecure httpsClient;    //Declare object of class WiFiClient
+const char* root_ca= \
+"-----BEGIN PUBLIC KEY-----\n"\
+"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsj496jJ99veEXO7WdxGQ\n" \
+"Z7idtCnDcjZqQeDiy6057SwXj9yDUVnqhwo/yII8+y6Jpk3g75LpPpYNjiOwYp/J\n" \
+"kpWbpBAd1FWlvXJo/eZS+TwuIYb7JSc2H3NDDKt2VV5SSKQdXOkDNqq7BisOFp2/\n" \
+"TYwCMZboLufwRR5fKxL0nTKIOCwpnH8k//UdWpvTgIixDGLYQCwHt0fYEo49jFeD\n" \
+"aKD4WMBPq6Tx1iKWBhw3HVc/OyvI3yjRAx4Anf/DCSt9YTW6f/ND4O/fOowcfW5T\n" \
+"7zii1Kw0yw+ulBrE/xe6taVhL+QR0MXNkQV2iHNN85swidwMtcdGI8g3fYL48bSR\n" \
+"ywIDAQAB\n" \
+"-----END CERTIFICATE-----\n";
+
+String HTTPGet(String url) {
+  if ((WiFi.status() == WL_CONNECTED)) { //Check the current connection status
  
-  Serial.println(host);
+    HTTPClient http;
  
-  Serial.printf("Using fingerprint '%s'\n", fingerprint);
-  httpsClient.setFingerprint(fingerprint);
-  httpsClient.setTimeout(15000); // 15 Seconds
-  delay(1000);
-  
-  Serial.print("HTTPS Connecting");
-  int r=0; //retry counter
-  while((!httpsClient.connect(host, httpsPort)) && (r < 30)){
-      delay(100);
-      Serial.print(".");
-      r++;
-  }
-  if(r==30) {
-    Serial.println("Connection failed");
-  }
-  else {
-    Serial.println("Connected to web");
-  }
-    // Mandamos comandos para toma de temperatura a los sensores
-    Serial.println("Mandando comandos a los sensores");
-    sensorDS18B20.requestTemperatures();
+    http.begin("https://api.citylink.cl/" + url, root_ca); //Specify the URL and certificate
+    int httpCode = http.GET();                                                  //Make the request
  
-    // Leemos y mostramos los datos de los sensores DS18B20
-    Serial.print("Temperatura: ");
-    Serial.print(sensorDS18B20.getTempCByIndex(0));
-    Serial.println(" C");
-    int ADCData = int(sensorDS18B20.getTempCByIndex(0));
-  
-  //String ADCData;
-  String Link;
-  //int adcvalue= 150;  //Read Analog value of LDR
-  //ADCData = String(adcvalue);   //String to interger conversion
+    if (httpCode > 0) { //Check for the returning code
  
-  //GET Data
- Link = "/metrics/7d384f6a?value=" + ADCData;
+        String payload = http.getString();
+        Serial.println(httpCode);
+        return payload;
+      }
  
-  Serial.print("requesting URL: ");
-  Serial.println(host+Link);
- 
-  httpsClient.print(String("POST ") + Link + " HTTP/1.1\r\n" +
-               "Host: " + host + "\r\n" +               
-               "Connection: close\r\n\r\n");
- 
-  Serial.println("request sent");
-                  
-  while (httpsClient.connected()) {
-    String line = httpsClient.readStringUntil('\n');
-    if (line == "\r") {
-      Serial.println("headers received");
-      break;
+    else {
+      Serial.println("Error on HTTP request");
     }
-  }
  
-  Serial.println("reply was:");
-  Serial.println("==========");
-  String line;
-  while(httpsClient.available()){        
-    line = httpsClient.readStringUntil('\n');  //Read Line by Line
-    Serial.println(line); //Print response
+    http.end(); //Free the resources
   }
-  Serial.println("==========");
-  Serial.println("closing connection");
-    
-  delay(2000);  //GET Data at every 2 seconds
+
+  return "";
+}
+
+String HTTPPost(String url, String _data) {
+  if ((WiFi.status() == WL_CONNECTED)) { //Check the current connection status
+ 
+    HTTPClient http;
+ 
+    http.begin("https://api.citylink.cl/" + url, root_ca); //Specify the URL and certificate
+    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    int httpCode = http.POST(_data);                                                  //Make the request
+ 
+    if (httpCode > 0) { //Check for the returning code
+ 
+        String payload = http.getString();
+        Serial.println(httpCode);
+        return payload;
+      }
+ 
+    else {
+      Serial.println("Error on HTTP request");
+    }
+ 
+    http.end(); //Free the resources
+  }
+
+  return "";
+}
+
+void loop() {
+
+  int sensor = digitalRead(1);
+
+  String json = HTTPPost("/metrics/7d384f6a", "value=" + String(sensor));
+  Serial.println(json);
+
+  int val = digitalRead(1);
+  Serial.println(val);
+ 
+  delay(10000);
 }
