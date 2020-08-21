@@ -61,12 +61,24 @@ void setup()
  */
 void onPinToggle(String id, String _status)
 {
+  Serial.print("id : ");
+  Serial.println(id);
+  Serial.print("status : ");
+  Serial.println(_status);
 }
 
 void onMessageCallback(WebsocketsMessage message)
 {
   Serial.print("Got Message: ");
   Serial.println(message.data());
+
+  String themessage = message.data();
+
+  int index = themessage.indexOf(":");
+  String id = themessage.substring(0, index);
+  String _status = themessage.substring(index+1, themessage.length());
+
+  onPinToggle(id, _status);
 }
 
 void onEventsCallback(WebsocketsEvent event, String data)
