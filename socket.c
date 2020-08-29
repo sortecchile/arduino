@@ -83,22 +83,10 @@ void onMessageCallback(WebsocketsMessage message)
 
 void onEventsCallback(WebsocketsEvent event, String data)
 {
-  if (event == WebsocketsEvent::ConnectionOpened)
-  {
-    Serial.println("Connnection Opened");
-  }
-  else if (event == WebsocketsEvent::ConnectionClosed)
+  if (event == WebsocketsEvent::ConnectionClosed)
   {
     Serial.println("Connnection Closed");
     is_connected = false;
-  }
-  else if (event == WebsocketsEvent::GotPing)
-  {
-    Serial.println("Got a Ping!");
-  }
-  else if (event == WebsocketsEvent::GotPong)
-  {
-    Serial.println("Got a Pong!");
   }
 }
 
@@ -123,6 +111,16 @@ void connect()
   Serial.println("connected");
 }
 
+// delta
+float oldTime = 0;
+float delta_accumulator = 0;
+float CalculateDeltaTime(){
+  float currentTime = millis();
+  float deltaTime = currentTime - oldTime;
+  oldTime = currentTime;
+  return deltaTime;
+}
+
 void loop()
 {
   if (!is_connected)
@@ -133,4 +131,23 @@ void loop()
   {
     client.poll();
   }
+
+  if (is_connected)
+  {
+    delta_accumulator += CalculateDeltaTime();
+    // 1 seconds = 1000 millis
+    if (delta_accumulator > 30000)
+    {
+      delta_accumulator = 0; // reset accumulator
+      // humedad
+      client.send(String("add:bf9c3de0:") + analogRead(33));
+
+      // temperatura
+      client.send(String("add:7d384f6a:") + analogRead(34));
+
+      // flujometro
+      client.send(String("add:6cedc79c:") + analogRead(35));
+    }
+  }
+
 }
