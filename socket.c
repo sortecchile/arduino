@@ -4,6 +4,7 @@
 bool is_connected = false;
 const char *ssid = "lp";
 const char *password = "theewoklinelp";
+const int sensor_data_delta = 30;  // in seconds
 #define wifi_timeout 2000
 
 const char *websockets_server = "ws://34.70.117.79:8765/uri"; //server adress and port
@@ -136,7 +137,7 @@ void loop()
   {
     delta_accumulator += CalculateDeltaTime();
     // 1 seconds = 1000 millis
-    if (delta_accumulator > 30000)
+    if (delta_accumulator > sensor_data_delta * 1000)
     {
       delta_accumulator = 0; // reset accumulator
       // humedad
