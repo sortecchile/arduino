@@ -4,9 +4,14 @@
 #include "Adafruit_SHT31.h"
 #include <Wire.h>
 #include <Arduino.h>
+#include <OneWire.h>  
+#include <DallasTemperature.h>
 
 //Constantes Anemometro y pluviometro:
 
+OneWire ourWire(4);  
+
+DallasTemperature sensors(&ourWire);
 
 float PIN_ANEMOMETER = 2;     // Digital 2 (Rojo: 2 , verde: GND)
 float PIN_RAINGAUGE = 5;   
@@ -27,8 +32,8 @@ time_t now;
 
 //Coneccion wifi 
 bool is_connected = false;
-const char *ssid = "Casa_Castellon";
-const char *password = "Cm141966588";
+const char *ssid = "ZTE-C16367";
+const char *password = "53927124";
 const int sensor_data_delta  = 10;  // in seconds
 #define wifi_timeout 2000
 
@@ -57,6 +62,7 @@ void countAnemometer() {
 
 void setup() {
    Serial.begin(115200);
+   sensors.begin(); 
    pinMode(PIN_RAINGAUGE, INPUT_PULLUP);
    pinMode(PIN_ANEMOMETER, INPUT_PULLUP);
    digitalWrite(PIN_RAINGAUGE, HIGH);
@@ -242,7 +248,8 @@ float calcRainFall(int y1, int y2) {
 
 void loop() {
   now = millis();
-  
+  sensors.requestTemperatures();  
+  float temp= sensors.getTempCByIndex(0); 
   float t = sht31.readTemperature();
   float h = sht31.readHumidity();
 
@@ -269,31 +276,41 @@ void loop() {
   {
     
       delta_accumulator += CalculateDeltaTime();
+
+      //1,800,000 = 30 minutos
+      //600000 = 10 minutos
       
-      if (delta_accumulator >= 10000){
+      if (delta_accumulator >= 1800000){
 
        
 
-      //Serial.println("Velocidad del viento; ");
-      //Serial.println(calcWindSpeed(numRevsAnemometer,MSECS_CALC_WIND_SPEED));
+      Serial.println("Velocidad del viento; ");
+      Serial.println(calcWindSpeed(numRevsAnemometer,MSECS_CALC_WIND_SPEED));
       Serial.println("lluvia:");
       Serial.println(calcRainFall(numDropsRainGauge,PIN_RAINGAUGE));
       Serial.println("Humedad: ");
       Serial.println(h);
       Serial.println("Temperatura: ");
       Serial.println(t);
+
+      Serial.print("Temperatura_tierra= ");
+       Serial.print(temp);
+      Serial.println(" C");
       
       // humedad
-      client.send(String("add:00d69ddc:") + h);
+      client.send(String("add:ad804cb8:") + h);
       
       // temperatura
-      client.send(String("add:01be1256:") + t);
+      client.send(String("add:b0a5f4e2:") + t);
 
       // velocidad del viento
-      client.send(String("add:00a102e2:") + int(calcWindSpeed(numRevsAnemometer,MSECS_CALC_WIND_SPEED))*1000);
+      client.send(String("add:b5747c6e:") + int(calcWindSpeed(numRevsAnemometer,MSECS_CALC_WIND_SPEED))*1000);
 
       // Pluviometro
-      client.send(String("add:023a91c2:") + calcRainFall(numDropsRainGauge,PIN_RAINGAUGE)*1000);
+      client.send(String("add:b31bb41e:") + calcRainFall(numDropsRainGauge,PIN_RAINGAUGE)*1000);
+
+      //
+      client.send(String("add:ad804cb2:") + temp);
 
       delta_accumulator = 0; // reset accumulator
 
