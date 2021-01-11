@@ -304,7 +304,7 @@ void loop() {
       client.send(String("add:b0a5f4e2:") + t);
 
       // velocidad del viento
-      client.send(String("add:b5747c6e:") + int(calcWindSpeed(numRevsAnemometer,MSECS_CALC_WIND_SPEED))*1000);
+      client.send(String("add:b5747c6e:") + int(calcWindSpeed(numRevsAnemometer,MSECS_CALC_WIND_SPEED)*1000));
 
       // Pluviometro
       client.send(String("add:b31bb41e:") + calcRainFall(numDropsRainGauge,PIN_RAINGAUGE)*1000);
