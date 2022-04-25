@@ -4,17 +4,17 @@
 #include "Adafruit_SHT31.h"
 #include <Wire.h>
 #include <Arduino.h>
-#include <OneWire.h>  
+#include <OneWire.h>
 #include <DallasTemperature.h>
 
 //Constantes Anemometro y pluviometro:
 
-OneWire ourWire(4);  
+OneWire ourWire(4);
 
 DallasTemperature sensors(&ourWire);
 
 float PIN_ANEMOMETER = 2;     // Digital 2 (Rojo: 2 , verde: GND)
-float PIN_RAINGAUGE = 5;   
+float PIN_RAINGAUGE = 5;
 
 //Amarillo 21
 
@@ -25,12 +25,12 @@ float PIN_RAINGAUGE = 5;
 volatile int numRevsAnemometer = 0;
 volatile int numDropsRainGauge = 0;
 
-int nextCalcSpeed;  
-int nextCalcRain;  
+int nextCalcSpeed;
+int nextCalcRain;
 
-time_t now; 
+time_t now;
 
-//Coneccion wifi 
+//Coneccion wifi
 bool is_connected = false;
 const char *ssid = "ZTE-C16367";
 const char *password = "53927124";
@@ -52,17 +52,17 @@ Adafruit_SHT31 sht31 = Adafruit_SHT31();
 
 void countRainGauge() {
    numDropsRainGauge++;
-   
+
 }
 
 void countAnemometer() {
    numRevsAnemometer++;
-   
+
 }
 
 void setup() {
    Serial.begin(115200);
-   sensors.begin(); 
+   sensors.begin();
    pinMode(PIN_RAINGAUGE, INPUT_PULLUP);
    pinMode(PIN_ANEMOMETER, INPUT_PULLUP);
    digitalWrite(PIN_RAINGAUGE, HIGH);
@@ -73,10 +73,10 @@ void setup() {
    nextCalcSpeed = millis() + MSECS_CALC_WIND_SPEED;
 
       if (! sht31.begin(0x44))
-  { 
+  {
   Serial.println("Couldn't find SHT31");
   while (1) delay(1);
-} 
+}
 
 }
 
@@ -126,7 +126,7 @@ void onPinToggle(String id, String _status)
   if ((id == Relay_1) and (_status == "off")){
     digitalWrite (RELAY_1, LOW);}
     */
-  
+
 }
 
 void onMessageCallback(WebsocketsMessage message)
@@ -214,7 +214,7 @@ float calcWindSpeed(int y1, int y2) {
    return float (x1 + x3/10);
 
 
-   
+
 }
 
 
@@ -239,7 +239,7 @@ float calcRainFall(int y1, int y2) {
    //Serial.print(x);
    float x3 = x2;
    //Serial.println();
-   
+
    //numDropsRainGauge = 0;        // Reset counter
    return float (x1+x3/10000);
 }
@@ -248,8 +248,8 @@ float calcRainFall(int y1, int y2) {
 
 void loop() {
   now = millis();
-  sensors.requestTemperatures();  
-  float temp= sensors.getTempCByIndex(0); 
+  sensors.requestTemperatures();
+  float temp= sensors.getTempCByIndex(0);
   float t = sht31.readTemperature();
   float h = sht31.readHumidity();
 
@@ -257,14 +257,14 @@ void loop() {
    //Serial.println(calcRainFall(numDropsRainGauge, PIN_RAINGAUGE));
    delay(1000);
 
-      
-  if (!is_connected) 
+
+  if (!is_connected)
   {
-    
+
     ConnectToWifi();
     Serial.println("Wifi o socket desconectado");
     connect();
-    
+
   }
     else
   {
@@ -272,17 +272,16 @@ void loop() {
   }
 
   if (is_connected)
-  
   {
-    
+
       delta_accumulator += CalculateDeltaTime();
 
       //1,800,000 = 30 minutos
       //600000 = 10 minutos
-      
+
       if (delta_accumulator >= 1800000){
 
-       
+
 
       Serial.println("Velocidad del viento; ");
       Serial.println(calcWindSpeed(numRevsAnemometer,MSECS_CALC_WIND_SPEED));
@@ -294,12 +293,12 @@ void loop() {
       Serial.println(t);
 
       Serial.print("Temperatura_tierra= ");
-       Serial.print(temp);
+      Serial.print(temp);
       Serial.println(" C");
-      
+
       // humedad
       client.send(String("add:ad804cb8:") + h);
-      
+
       // temperatura
       client.send(String("add:b0a5f4e2:") + t);
 
@@ -314,9 +313,6 @@ void loop() {
 
       delta_accumulator = 0; // reset accumulator
 
-      }
-
+    }
   }
-
-  
 }
